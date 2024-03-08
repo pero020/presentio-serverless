@@ -1,0 +1,6 @@
+{
+  "type": "module",
+  "devDependencies": {
+    "serverless-functions-base-path": "^1.0.33"
+  }
+}

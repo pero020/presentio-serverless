@@ -1,0 +1,51 @@
+service: presentio-serverless
+frameworkVersion: "3"
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  stage: dev
+  region: eu-central-1
+  environment:
+    DYNAMODB_CUSTOMER_TABLE: ${self:service}-customerTable-${sls:stage}
+  iam:
+    role:
+      statements:
+        - Effect: "Allow"
+          Action:
+            - "dynamodb:PutItem"
+            - "dynamodb:Get*"
+            - "dynamodb:GetItem"
+            - "dynamodb:UpdateItem"
+            - "dynamodb:DeleteItem"
+          Resource: arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:service}-customerTable-${sls:stage}
+
+functions:
+  function1:
+    handler: index.handler
+  createNewPresentation:
+    handler: createNewPresentation.handler
+    events:
+      - httpApi:
+          path: /createNewPresentation
+          method: post
+  getPresentation:
+    handler: getPresentation.handler
+    events:
+      - httpApi:
+          path: /getPresentation
+          method: post
+
+resources:
+  Resources:
+    CustomerTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        AttributeDefinitions:
+          - AttributeName: Id
+            AttributeType: S
+        BillingMode: PAY_PER_REQUEST
+        KeySchema:
+          - AttributeName: Id
+            KeyType: HASH
+        TableName: ${self:service}-customerTable-${sls:stage}

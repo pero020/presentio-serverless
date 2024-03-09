@@ -6,8 +6,13 @@ provider:
   runtime: nodejs20.x
   stage: dev
   region: eu-central-1
+  httpApi:
+    cors: true
   environment:
     DYNAMODB_CUSTOMER_TABLE: ${self:service}-customerTable-${sls:stage}
+    AWS_ACCOUNT_ID: ${aws:accountId}
+    AWS_SERVICE_REGION: ${aws:region}
+    PRESENTER_QUEUE: ${self:resources.Resources.notifyPresenterQueue.Properties.QueueName}
   iam:
     role:
       statements:
@@ -19,9 +24,16 @@ provider:
             - "dynamodb:UpdateItem"
             - "dynamodb:DeleteItem"
           Resource: arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:service}-customerTable-${sls:stage}
+        - Effect: "Allow"
+          Action:
+            - sqs:SendMessage
+          Resource:
+            Fn::GetAtt:
+              - notifyPresenterQueue
+              - Arn
 
 functions:
-  function1:
+  status:
     handler: index.handler
   createNewPresentation:
     handler: createNewPresentation.handler
@@ -35,6 +47,54 @@ functions:
       - httpApi:
           path: /getPresentation
           method: post
+  enterPresentation:
+    handler: enterPresentation.handler
+    events:
+      - websocket:
+          route: enterPresentation
+  endPresentation:
+    handler: endPresentation.handler
+    events:
+      - websocket:
+          route: endPresentation
+  enterPresentationAsPresenter:
+    handler: enterPresentationAsPresenter.handler
+    events:
+      - websocket:
+          route: enterPresentationAsPresenter
+  sendTopicIssue:
+    handler: sendTopicIssue.handler
+    events:
+      - websocket:
+          route: sendTopicIssue
+  sendLostIssue:
+    handler: sendLostIssue.handler
+    events:
+      - websocket:
+          route: sendLostIssue
+  resolveTopicIssue:
+    handler: resolveTopicIssue.handler
+    events:
+      - websocket:
+          route: resolveTopicIssue
+  resolveLostIssue:
+    handler: resolveLostIssue.handler
+    events:
+      - websocket:
+          route: resolveLostIssue
+  confirmLostIssue:
+    handler: confirmLostIssue.handler
+    events:
+      - websocket:
+          route: confirmLostIssue
+  checkNeedNotify:
+    handler: checkNeedNotify.handler
+    events:
+      - sqs:
+          arn:
+            Fn::GetAtt:
+              - notifyPresenterQueue
+              - Arn
 
 resources:
   Resources:
@@ -49,3 +109,7 @@ resources:
           - AttributeName: Id
             KeyType: HASH
         TableName: ${self:service}-customerTable-${sls:stage}
+    notifyPresenterQueue:
+      Type: "AWS::SQS::Queue"
+      Properties:
+        QueueName: "notifyPresenterQueue"

@@ -104,7 +104,10 @@ resources:
         AttributeDefinitions:
           - AttributeName: Id
             AttributeType: S
-        BillingMode: PAY_PER_REQUEST
+        BillingMode: PROVISIONED
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
         KeySchema:
           - AttributeName: Id
             KeyType: HASH
